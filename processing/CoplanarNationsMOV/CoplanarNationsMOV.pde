@@ -1,0 +1,125 @@
+import processing.net.*;
+Server server = null;
+Client client = null;
+
+PlanarNation israel;
+PlanarNation palestine;
+
+Camera camera1;
+
+Light light1;
+//Light light2;
+
+Voices voices;
+
+int qty_vertices = 32;
+
+void setup() {
+
+  fullScreen(P3D, 2);
+
+  //size(1920, 1080, P3D);
+
+  noSmooth();
+  pixelDensity(1);
+  background(0);
+
+  server = new Server(this, 1337);
+
+  camera1 = new Camera();
+  light1 = new Light(new PVector(
+    0.0, 0.0, 100.0
+  ));
+  
+  //light2 = new Light(new PVector(
+  //  0.0, 0.0, -100.0
+  //));
+
+  israel = new PlanarNation(
+    qty_vertices,
+    loadImage("Flag_of_Israel.svg.png")
+    );
+
+  palestine = new PlanarNation(
+    qty_vertices,
+    loadImage("Flag_of_Palestine.svg.png")
+    );
+
+  populate_notes();
+
+  voices = new Voices(2, B_locrian);
+}
+
+void draw() {
+  background(0);
+  camera1.update();
+
+  light1.update();
+  light1.light();
+  //light2.update();
+  //light2.light();
+
+  pushMatrix();
+
+  israel.update();
+  israel.render();
+
+  palestine.update();
+  palestine.render();
+
+  fill(255);
+  popMatrix();
+
+  loadPixels();
+  handleClient();
+  voices.render(pixels);
+  voices.update();
+  updatePixels();
+}
+
+void handleClient() {
+  try {
+    client = server.available();
+    if (client != null) {
+      String message = client.readString();
+      if (message != null) {
+        JSONObject json = parseJSONObject(message);
+        if (json == null) {
+          println("JSONObject could not be parsed");
+        } else {
+          JSONObject response = processJSON(json);
+          if (response != null) client.write(response.toString());
+        }
+      }
+    }
+  }
+  catch(Exception e) {
+    println("Exception caught @ handleClient(): " + e);
+    print(e.toString());
+    client.stop();
+    server.disconnect(client);
+  }
+}
+
+JSONObject processJSON(JSONObject json) {
+  try {
+    String type = json.getString("type");
+    String parameter = json.getString("parameter");
+    if (type.equals("get") && parameter.equals("frames")) {
+      JSONObject response = new JSONObject();
+      int frames = json.getInt("frame_count");
+      int[] data = voices.getPixelData(pixels, frames);
+      if (data == null) return null;
+      JSONArray json_data = new JSONArray();
+      for (int i = 0; i < frames; i++) {
+        json_data.setInt(i, data[i]);
+      }
+      response.setJSONArray("data", json_data);
+      return response;
+    }
+  }
+  catch (Exception e) {
+    println("Exception caught @ processJSON(): " + e);
+  }
+  return null;
+}
