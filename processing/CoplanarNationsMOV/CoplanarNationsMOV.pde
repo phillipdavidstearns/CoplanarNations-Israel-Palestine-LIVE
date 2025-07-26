@@ -37,12 +37,12 @@ void setup() {
 
   israel = new PlanarNation(
     qty_vertices,
-    loadImage("Flag_of_Israel.svg.png")
+    loadImage("Flag_of_Israel.png")
     );
 
   palestine = new PlanarNation(
     qty_vertices,
-    loadImage("Flag_of_Palestine.svg.png")
+    loadImage("Flag_of_Palestine.png")
     );
 
   populate_notes();
