@@ -427,11 +427,10 @@ void keyPressed() {
     break;
 
   case '\\':
-    light1.setPositionZ(
-      random(100, 500)
-      );
+    light1.setPositionZ(random(100, 500));
     break;
   case '|':
+    light1.setPositionZ(250);
     break;
 
   case 'E':

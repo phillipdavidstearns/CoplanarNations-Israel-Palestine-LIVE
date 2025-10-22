@@ -16,7 +16,8 @@ int qty_vertices = 32;
 
 void setup() {
 
-  fullScreen(P3D, 2);
+  fullScreen(OPENGL, 2);
+  noCursor();
 
   //size(1920, 1080, P3D);
 

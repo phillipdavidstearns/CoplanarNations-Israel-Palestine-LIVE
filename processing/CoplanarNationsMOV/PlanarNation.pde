@@ -76,6 +76,7 @@ class PlanarNation {
   // render
 
   void render() {
+    float[] start;
     float[] temp;
 
     if (this.render_edges) {
@@ -98,6 +99,16 @@ class PlanarNation {
       noFill();
     }
     
+    for (int i = 0; i < this.vertices.length - 2; i++){
+      start = this.morph_enabled ? this.vertices_morphed[i] : this.vertices[i];
+      this.placeVertex(start);
+      for(int j = 1; j < 3; j++){
+        temp = this.morph_enabled ? this.vertices_morphed[i+j] : this.vertices[i+j];
+        this.placeVertex(temp);
+      }
+      this.placeVertex(start);
+    }
+
     for (int i = 0; i < this.vertices.length; i++) {
       temp = this.morph_enabled ? this.vertices_morphed[i] : this.vertices[i];
       this.placeVertex(temp);
@@ -110,7 +121,6 @@ class PlanarNation {
     popMatrix();
   }
 
-  
   void placeVertex(float[] vertex) {
     vertex(
       width * (vertex[0] + 2 *( noise(vertex[0], this.noise_position + this.noise_offset[0]) - 0.5)),
