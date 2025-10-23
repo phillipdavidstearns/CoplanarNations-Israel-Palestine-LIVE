@@ -3,7 +3,7 @@ let pingInterval = null;
 let reconnectInterval = null;
 const socketURL = "ws://localhost:8080";
 
-let websocket = null; 
+var websocket = null;
 
 function connect(){
   try{
@@ -26,7 +26,6 @@ function addListeners(websocket){
   websocket.addEventListener("open", (event) => {
     clearInterval(reconnectInterval);
     pingInterval = setInterval(() => {
-      log(`SENT: ping: ${counter}`);
       websocket.send("ping");
     }, 1000);
     websocket.send("Hello Server!");
@@ -34,7 +33,12 @@ function addListeners(websocket){
 
   // Listen for messages
   websocket.addEventListener("message", (event) => {
-    console.log("Message from server ", event.data);
+    try {
+      const message = JSON.parse(event.data);
+      parseMessage(message);
+    } catch (error) {
+      console.log(error);
+    }
   });
 
   // Close

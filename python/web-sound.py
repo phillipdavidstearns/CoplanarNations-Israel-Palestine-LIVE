@@ -9,6 +9,12 @@ from time import sleep
 from threading import Thread, Lock, Timer
 from signal import *
 
+import select
+
+import asyncio
+from websockets.asyncio.server import serve
+from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
+
 #===========================================================================
 # Signal Handler / shutdown procedure
 
@@ -18,7 +24,7 @@ def signalHandler(signum, frame):
 
 def shutdown():
   try:
-    client.stop()
+    ws.stop()
     sound.stop()
   except Exception as e:
     logging.error(f'Oh dang! {repr(e)}')
@@ -28,60 +34,79 @@ def shutdown():
 
 #===========================================================================
 
-class Client(Thread):
-  def __init__(self, host='127.0.0.1', port=1337):
+class WebsocketServer(Thread):
+  def __init__(self, host='0.0.0.0', port=8000):
     super().__init__()
     self.daemon = True
     self.lock=Lock()
     self.host = host
     self.port = port
+    self.loop = None
+    self.server = None
+    self.message_queue = []
     self.buffer = bytearray()
-    self.socket = None
+    self.clients = set()
     self.lastSlice = bytearray()
-    self.is_connected = False
     self.doRun = False
 
-  def init_socket(self):
-    logging.info(f"connecting...")
-    try:
-      self.socket = socket.socket()
-      self.socket.connect((self.host, self.port))
-      self.is_connected = True
-      logging.info('connected!')
-    except socket.error as e:
-      logging.error(f"{type(e).__name__}: {e}")
-    except Exception as e:
-      self.is_connected = False
-      template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-      message = template.format(type(e).__name__, e.args)
-      logging.error(f'{message}')
-
-  def write(self, message):
-    try:
-      if self.is_connected: 
-        self.socket.send(bytes(message, 'utf-8'))
-    except socket.error as e:
-      logging.error(f'{e}')
-      self.is_connected = False
-
-  def read(self):
-    if not self.is_connected: return
+  async def consume(self, message):
     try: # grab a chunk of data from the socket...
-      message = self.socket.recv(65536).decode('utf-8')
       message = json.loads(message)
       data = bytes(message['data'])
       if data:
-        with self.lock:
-          self.buffer += data # if there's any data there, add it to the buffer  
-    except socket.error as e:
-      logging.error(f'read() Socket Error: {e}')
-      self.lastSlice = bytearray()
-      self.is_connected = False
+        self.buffer += data # if there's any data there, add it to the buffer  
     except json.JSONDecodeError as e:
       pass
     except Exception as e: # if there's definitely no data to be read. the socket will throw and exception
       logging.error(f'read() Other Error: {type(e).__name__}\n{e}')
       pass
+
+  async def produce(self):
+    message = None
+    if len(self.message_queue) > 0:
+      message = self.message_queue[0]
+      self.message_queue = self.message_queue[1:]
+    return message
+
+  async def consumer_handler(self, websocket):
+    while True:
+      try:
+        message = await websocket.recv()
+        if message:
+          await self.consume(message)
+        await asyncio.sleep(0.01)
+      except ConnectionClosed:
+        logging.info("Connection Closed")
+        break
+      except Exception as e:
+        logging.error(f'in consumer_handler(): {repr(e)}')
+
+  async def producer_handler(self, websocket):
+    while True:
+      try:
+        message = await self.produce()
+        if message:
+          await websocket.send(message)
+        await asyncio.sleep(0.01)
+      except ConnectionClosed:
+        logging.info("Connection Closed")
+        break
+      except Exception as e:
+        logging.error(f'in producer_handler(): {repr(e)}')
+
+  async def handler(self, websocket):
+    logging.debug(f"starting new connection {repr(websocket)}")
+    self.clients.add(websocket)
+    try:
+      await asyncio.gather(
+        self.consumer_handler(websocket),
+        self.producer_handler(websocket)
+      )
+    finally:
+      self.clients.remove(websocket)
+
+  def write(self, message):
+    self.message_queue.append(message)
 
   def extractFrames(self, frames, width):
     bufferSize = frames * width
@@ -99,31 +124,26 @@ class Client(Thread):
 
       # this makes sure we return as many frames as requested, by padding with audio "0"
       extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
-      
       return extractedFrames
 
+  async def main(self):
+    self.loop = asyncio.get_running_loop()
+    async with serve(self.handler, self.host, self.port) as self.server:
+      await self.server.serve_forever()
+  
   def run(self):
-    logging.info('[Client] run()')
-    self.doRun = True
-    while self.doRun:
-      try:
-        while not self.is_connected and self.doRun:
-          self.init_socket()
-          sleep(5)
-        self.read()
-        sleep(0.0001)
-      except Exception as e:
-        logging.error('run(): %s' % repr(e))
+    logging.info('[WebsocketServer] start()')
+    try:
+      asyncio.run(self.main())
+    except Exception as e:
+      logging.error('run(): %s' % repr(e))
 
   def stop(self):
-    logging.info('[Client] stop()')
-    self.doRun = False
+    logging.info('[WebsocketServer] stop()')
     try:
-      self.socket.close()
+      self.server.close()
     except Exception as e:
-      logging.error('While closing socket: %e' % repr(e))
-    self.join()
-
+      logging.error(f'While closing socket: {repr(e)}')
 
 #===========================================================================
 # Audifer
@@ -199,17 +219,19 @@ class Audifier():
 
 if __name__ == "__main__":
 
-  width = 1
-
   logging.basicConfig(
     level=10,
-    format='[Coplanar Nations Sound Engine] - %(levelname)s | %(message)s'
+    format='[Websocket Test] - %(levelname)s | %(message)s'
   )
 
-  client = Client(
-      host = '127.0.0.1',
-      port = 1337
+  logging.getLogger("websockets").setLevel(logging.WARNING)
+
+  ws = WebsocketServer(
+      host = "localhost",
+      port = 8080
     )
+
+  width = 1
 
   def audio_callback(in_data, frame_count, time_info, status):
     message = json.dumps({
@@ -217,8 +239,8 @@ if __name__ == "__main__":
       'parameter' : 'frames',
       'frame_count' : frame_count
     })
-    client.write(message)
-    audioChunk = client.extractFrames(frame_count, width)
+    ws.write(message)
+    audioChunk = ws.extractFrames(frame_count, width)
     return(bytes(audioChunk), pyaudio.paContinue)
 
   sound = Audifier(width=width, callback=audio_callback)
@@ -229,7 +251,7 @@ if __name__ == "__main__":
 
   try:
 
-    client.start()
+    ws.start()
     sound.start()
 
     while True:
