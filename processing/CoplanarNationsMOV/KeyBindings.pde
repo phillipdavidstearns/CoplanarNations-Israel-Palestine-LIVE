@@ -1,70 +1,78 @@
 float[][] vertices;
 boolean shift = false;
+boolean ctrl = false;
+boolean opt = false;
+boolean cmd = false;
 float rotation_step = PI/64.0;
 float translation_step = 100;
 int min_voices = 2;
 int max_voices = 20;
 
 void keyReleased() {
+  //println("released keyCode:" + keyCode + ", key: " + key);
   if (keyCode == 16) shift = false;
+  if (keyCode == 17) ctrl = false;
+  if (keyCode == 18) opt = false;
+  if (keyCode == 157) cmd = false;
 }
 
 void keyPressed() {
-  //println(keyCode);
-
+  //println("pressed keyCode:" + keyCode + ", key: " + key);
   if (keyCode == 16) shift = true;
+  if (keyCode == 17) ctrl = true;
+  if (keyCode == 18) opt = true;
+  if (keyCode == 157) cmd = true;
 
-  if (shift) { // rotate Z
-    switch(keyCode) {
-    case 37: // left
-      camera1.setRotationZ(camera1.rotation_target.z + rotation_step);
-      break;
-    case 39: // right
-      camera1.setRotationZ(camera1.rotation_target.z - rotation_step);
-      break;
+  switch(keyCode) {
+  case 32: // SCAPE_BAR turn off PlanarNation visibility and animation
 
-    case 32: // SCAPE_BAR turn off PlanarNation and Voices visibility, animation and output
-      israel.edge_flicker = false;
-      israel.texture_flicker = false;
-      israel.do_animate = false;
-      israel.render_edges = false;
-      israel.render_texture = false;
+    if (shift) {
+      nationA.edge_flicker = false;
+      nationA.texture_flicker = false;
+      nationA.do_animate = false;
+      nationA.render_edges = false;
+      nationA.render_texture = false;
 
-      palestine.edge_flicker = false;
-      palestine.texture_flicker = false;
-      palestine.do_animate = false;
-      palestine.render_edges = false;
-      palestine.render_texture = false;
+      nationB.edge_flicker = false;
+      nationB.texture_flicker = false;
+      nationB.do_animate = false;
+      nationB.render_edges = false;
+      nationB.render_texture = false;
 
       for (Voice v : voices.voices) {
         v.mute = true;
       }
-      break;
-    }
-  } else { // rotate X Y
-    switch(keyCode) {
-    case 32: // SCAPE_BAR turn off PlanarNation visibility and animation
-      israel.edge_flicker = false;
-      israel.texture_flicker = false;
-      israel.do_animate = false;
-      palestine.edge_flicker = false;
-      palestine.texture_flicker = false;
-      palestine.do_animate = false;
+    } else {
+      nationA.edge_flicker = false;
+      nationA.texture_flicker = false;
+      nationA.do_animate = false;
 
-      break;
-    case 37: // left
-      camera1.setRotationY(camera1.rotation_target.y + rotation_step);
-      break;
-    case 38: // up
-      camera1.setRotationX(camera1.rotation_target.x - rotation_step);
-      break;
-    case 39: // right
-      camera1.setRotationY(camera1.rotation_target.y - rotation_step);
-      break;
-    case 40: // down
-      camera1.setRotationX(camera1.rotation_target.x + rotation_step);
-      break;
+      nationB.edge_flicker = false;
+      nationB.texture_flicker = false;
+      nationB.do_animate = false;
     }
+
+    break;
+  case 37: // left
+    if (shift) {
+      camera1.setRotationZ(camera1.rotation_target.z + rotation_step);
+    } else {
+      camera1.setRotationY(camera1.rotation_target.y + rotation_step);
+    }
+    break;
+  case 38: // up
+    camera1.setRotationX(camera1.rotation_target.x - rotation_step);
+    break;
+  case 39: // right
+    if (shift) {
+      camera1.setRotationZ(camera1.rotation_target.z - rotation_step);
+    } else {
+      camera1.setRotationY(camera1.rotation_target.y - rotation_step);
+    }
+    break;
+  case 40: // down
+    camera1.setRotationX(camera1.rotation_target.x + rotation_step);
+    break;
   }
 
   switch(key) {
@@ -97,13 +105,28 @@ void keyPressed() {
 
     // Camera Z
   case '1':
-    camera1.setPositionZ(10);
+    if (ctrl || cmd) {
+      nationA = nations[0];
+      nationB = nations[1];
+    } else {
+      camera1.setPositionZ(10);
+    }
     break;
   case '2':
-    camera1.setPositionZ(20);
+    if (ctrl || cmd) {
+      nationA = nations[2];
+      nationB = nations[3];
+    } else {
+      camera1.setPositionZ(20);
+    }
     break;
   case '3':
-    camera1.setPositionZ(40);
+    if (ctrl || cmd) {
+      nationA = nations[4];
+      nationB = nations[5];
+    } else {
+      camera1.setPositionZ(40);
+    }
     break;
   case '4':
     camera1.setPositionZ(80);
@@ -164,112 +187,117 @@ void keyPressed() {
     // Camera Orbit Radius
 
 
-    //case 'o':
-    //  camera1.orbit_camera = !camera1.orbit_camera;
-    //  break;
+  case 'M':
+    camera1.orbit_camera = !camera1.orbit_camera;
+    println("orbit camera: "+ camera1.orbit_camera);
+    if (camera1.orbit_camera) {
+      camera1.randomize_orbit();
+      camera1.orbit_rate = random(0.001, 0.01);
+    }
+    break;
     //case 'O':
     //  camera1.randomize_orbit();
     //  break;
 
   case 'm':
-    israel.morph(israel.generateVertices(qty_vertices));
-    palestine.morph(palestine.generateVertices(qty_vertices));
+    nationA.morph(nationA.generateVertices(qty_vertices));
+    nationB.morph(nationB.generateVertices(qty_vertices));
     break;
 
   case'r':
-    israel.render_texture = !israel.render_texture;
-    if (!israel.render_texture) israel.randomizeVertices();
+    nationA.render_texture = !nationA.render_texture;
+    if (!nationA.render_texture) nationA.randomizeVertices();
     break;
   case't':
-    israel.render_texture = !israel.render_texture;
-    if (!israel.render_texture) israel.randomizeVertices();
-    palestine.render_texture = !palestine.render_texture;
-    if (!palestine.render_texture) palestine.randomizeVertices();
+    nationA.render_texture = !nationA.render_texture;
+    if (!nationA.render_texture) nationA.randomizeVertices();
+    nationB.render_texture = !nationB.render_texture;
+    if (!nationB.render_texture) nationB.randomizeVertices();
     break;
   case'y':
-    palestine.render_texture = !palestine.render_texture;
-    if (!palestine.render_texture) palestine.randomizeVertices();
+    nationB.render_texture = !nationB.render_texture;
+    if (!nationB.render_texture) nationB.randomizeVertices();
     break;
 
   case'R':
-    israel.render_edges = !israel.render_edges;
+    nationA.render_edges = !nationA.render_edges;
     break;
   case'T':
-    israel.render_edges = !israel.render_edges;
-    palestine.render_edges = !palestine.render_edges;
+    nationA.render_edges = !nationA.render_edges;
+    nationB.render_edges = !nationB.render_edges;
     break;
   case'Y':
-    palestine.render_edges = !palestine.render_edges;
+    nationB.render_edges = !nationB.render_edges;
     break;
 
   case 'f':
-    israel.randomizeVertices();
+    nationA.randomizeVertices();
     break;
   case 'g':
-    israel.randomizeVertices();
-    palestine.randomizeVertices();
+    nationA.randomizeVertices();
+    nationB.randomizeVertices();
     break;
   case 'h':
-    palestine.randomizeVertices();
+    nationB.randomizeVertices();
     break;
 
   case 'F':
-    israel.do_animate = !israel.do_animate;
+    nationA.do_animate = !nationA.do_animate;
     break;
   case 'G':
-    israel.do_animate = !israel.do_animate;
-    palestine.do_animate = !palestine.do_animate;
+    nationA.do_animate = !nationA.do_animate;
+    nationB.do_animate = !nationB.do_animate;
     break;
   case 'H':
-    palestine.do_animate = !palestine.do_animate;
+    nationB.do_animate = !nationB.do_animate;
     break;
 
   case 'v':
-    israel.texture_flicker = !israel.texture_flicker;
+    nationA.texture_flicker = !nationA.texture_flicker;
     break;
   case 'b':
-    israel.texture_flicker = !israel.texture_flicker;
-    palestine.texture_flicker = !palestine.texture_flicker;
+    nationA.texture_flicker = !nationA.texture_flicker;
+    nationB.texture_flicker = !nationB.texture_flicker;
     break;
   case 'n':
-    palestine.texture_flicker = !palestine.texture_flicker;
+    nationB.texture_flicker = !nationB.texture_flicker;
     break;
 
   case 'V':
-    israel.edge_flicker = !israel.edge_flicker;
+    nationA.edge_flicker = !nationA.edge_flicker;
     break;
   case 'B':
-    israel.edge_flicker = !israel.edge_flicker;
-    palestine.edge_flicker = !palestine.edge_flicker;
+    nationA.edge_flicker = !nationA.edge_flicker;
+    nationB.edge_flicker = !nationB.edge_flicker;
     break;
   case 'N':
-    palestine.edge_flicker = !palestine.edge_flicker;
+    nationB.edge_flicker = !nationB.edge_flicker;
     break;
 
   case ',': // decrement animation rate
-    israel.noise_rate = constrain( israel.noise_rate - 0.0001, 0.0, 0.001);
-    palestine.noise_rate = constrain( palestine.noise_rate - 0.0001, 0.0, 0.005);
+    nationA.noise_rate = constrain( nationA.noise_rate - 0.0001, 0.0, 0.001);
+    nationB.noise_rate = constrain( nationB.noise_rate - 0.0001, 0.0, 0.005);
     break;
   case '.': // increment animation rate
-    israel.noise_rate = constrain( israel.noise_rate + 0.0001, 0.0, 0.001);
-    palestine.noise_rate = constrain( palestine.noise_rate + 0.0001, 0.0, 0.005);
+    nationA.noise_rate = constrain( nationA.noise_rate + 0.0001, 0.0, 0.001);
+    nationB.noise_rate = constrain( nationB.noise_rate + 0.0001, 0.0, 0.005);
     break;
   case '/':
-    israel.noise_rate = random(0.005);
-    palestine.noise_rate = random(0.005);
+    nationA.noise_rate = random(0.005);
+    nationB.noise_rate = random(0.005);
     break;
 
   case '<': // decrement flicker rate
-    israel.flicker_amount = constrain( israel.flicker_amount - 0.05, 0.01, 0.99);
-    palestine.flicker_amount = constrain( palestine.flicker_amount - 0.05, 0.01, 0.99);
+    nationA.flicker_amount = constrain( nationA.flicker_amount - 0.05, 0.01, 0.99);
+    nationB.flicker_amount = constrain( nationB.flicker_amount - 0.05, 0.01, 0.99);
     break;
   case '>': // increment flicker rate
-    israel.flicker_amount = constrain( israel.flicker_amount + 0.05, 0.01, 0.99);
-    palestine.flicker_amount = constrain( palestine.flicker_amount + 0.05, 0.01, 0.99);
+    nationA.flicker_amount = constrain( nationA.flicker_amount + 0.05, 0.01, 0.99);
+    nationB.flicker_amount = constrain( nationB.flicker_amount + 0.05, 0.01, 0.99);
     break;
   case '?':
-    israel.flicker_amount = random(0.01, 0.99);
-    palestine.flicker_amount = random(0.01, 0.99);
+    nationA.flicker_amount = random(0.01, 0.99);
+    nationB.flicker_amount = random(0.01, 0.99);
     break;
 
   case 'U': // all voices on

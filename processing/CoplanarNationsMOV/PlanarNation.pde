@@ -86,7 +86,6 @@ class PlanarNation {
       noStroke();
     }
 
-    pushMatrix();
     textureMode(NORMAL);
     textureWrap(REPEAT);
     
@@ -118,7 +117,6 @@ class PlanarNation {
     this.placeVertex(end);
     if(this.do_animate) this.noise_position += this.noise_rate;
     endShape();
-    popMatrix();
   }
 
   void placeVertex(float[] vertex) {

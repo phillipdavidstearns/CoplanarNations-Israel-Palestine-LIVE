@@ -88,8 +88,6 @@ class Camera {
     this.orbit_rate = random(0.001, 0.01);
   }
 
-
-
   void randomize() {
     this.position = new PVector(
       0.0,
@@ -158,8 +156,8 @@ class Camera {
   void orbit() {
     this.orbit_progress += this.orbit_rate;
     if (this.orbit_progress >= 1.0) this.orbit_progress-=1;
-    this.position.x = this.radius * cos(2 * PI * this.orbit_progress);
-    this.position.y = this.radius * sin(2 * PI * this.orbit_progress);
+    this.position_lerp.x = this.radius * cos(2 * PI * this.orbit_progress);
+    this.position_lerp.y = this.radius * sin(2 * PI * this.orbit_progress);
     this.radius = this.ease(this.radius, this.radius_target, this.radius_ease_amount);
   }
 

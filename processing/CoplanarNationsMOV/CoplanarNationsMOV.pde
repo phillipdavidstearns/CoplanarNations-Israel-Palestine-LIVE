@@ -2,13 +2,13 @@ import processing.net.*;
 Server server = null;
 Client client = null;
 
-PlanarNation israel;
-PlanarNation palestine;
+PlanarNation[] nations = new PlanarNation[6];
+PlanarNation nationA;
+PlanarNation nationB;
 
 Camera camera1;
 
 Light light1;
-//Light light2;
 
 Voices voices;
 
@@ -16,7 +16,7 @@ int qty_vertices = 32;
 
 void setup() {
 
-  fullScreen(OPENGL, 2);
+  fullScreen(P3D, 2);
   noCursor();
 
   //size(1920, 1080, P3D);
@@ -24,52 +24,69 @@ void setup() {
   noSmooth();
   pixelDensity(1);
   background(0);
+  frameRate(30);
 
   server = new Server(this, 1337);
 
   camera1 = new Camera();
   light1 = new Light(new PVector(
     0.0, 0.0, 100.0
-  ));
-  
-  //light2 = new Light(new PVector(
-  //  0.0, 0.0, -100.0
-  //));
+    ));
 
-  israel = new PlanarNation(
+  nations[0] = new PlanarNation(
+    qty_vertices,
+    loadImage("Flag_of_Sudan.png")
+    );
+
+  nations[1] = new PlanarNation(
+    qty_vertices,
+    loadImage("Flag_of_SPLM-N.png")
+    );
+
+  nations[2] = new PlanarNation(
+    qty_vertices,
+    loadImage("Flag_of_Russia.png")
+    );
+
+  nations[3] = new PlanarNation(
+    qty_vertices,
+    loadImage("Flag_of_Ukraine.png")
+    );
+
+  nations[4] = new PlanarNation(
     qty_vertices,
     loadImage("Flag_of_Israel.png")
     );
 
-  palestine = new PlanarNation(
+  nations[5] = new PlanarNation(
     qty_vertices,
     loadImage("Flag_of_Palestine.png")
     );
 
   populate_notes();
-
   voices = new Voices(2, B_locrian);
+
+  nationA = nations[0];
+  nationB = nations[1];
+
+  noiseDetail(3, 0.5);
 }
 
 void draw() {
   background(0);
+
   camera1.update();
 
   light1.update();
   light1.light();
-  //light2.update();
-  //light2.light();
 
-  pushMatrix();
+  nationA.update();
+  nationA.render();
 
-  israel.update();
-  israel.render();
-
-  palestine.update();
-  palestine.render();
+  nationB.update();
+  nationB.render();
 
   fill(255);
-  popMatrix();
 
   loadPixels();
   handleClient();

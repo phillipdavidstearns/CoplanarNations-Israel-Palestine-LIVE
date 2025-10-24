@@ -32,7 +32,6 @@ class Client(Thread):
   def __init__(self, host='127.0.0.1', port=1337):
     super().__init__()
     self.daemon = True
-    self.lock=Lock()
     self.host = host
     self.port = port
     self.buffer = bytearray()
@@ -70,9 +69,8 @@ class Client(Thread):
       message = self.socket.recv(65536).decode('utf-8')
       message = json.loads(message)
       data = bytes(message['data'])
-      if data:
-        with self.lock:
-          self.buffer += data # if there's any data there, add it to the buffer  
+      if data :
+        self.buffer = data # if there's any data there, add it to the buffer  
     except socket.error as e:
       logging.error(f'read() Socket Error: {e}')
       self.lastSlice = bytearray()
@@ -87,20 +85,19 @@ class Client(Thread):
     bufferSize = frames * width
     if len(self.lastSlice) == 0:
       self.lastSlice = bytearray(bytes([127])*bufferSize)
-    with self.lock:
-      extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
-      # remove the extracted data from the buffer
-      self.buffer = self.buffer[len(extractedFrames):]
+    extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
+    # remove the extracted data from the buffer
+    self.buffer = self.buffer[len(extractedFrames):]
 
-      if len(extractedFrames) == 0:
-        extractedFrames = self.lastSlice
-      else:
-        self.lastSlice = extractedFrames
+    if len(extractedFrames) == 0:
+      extractedFrames = self.lastSlice
+    else:
+      self.lastSlice = extractedFrames
 
-      # this makes sure we return as many frames as requested, by padding with audio "0"
-      extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
-      
-      return extractedFrames
+    # this makes sure we return as many frames as requested, by padding with audio "0"
+    extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
+
+    return extractedFrames
 
   def run(self):
     logging.info('[Client] run()')
@@ -111,7 +108,7 @@ class Client(Thread):
           self.init_socket()
           sleep(5)
         self.read()
-        sleep(0.0001)
+        sleep(0.001)
       except Exception as e:
         logging.error('run(): %s' % repr(e))
 
@@ -123,7 +120,6 @@ class Client(Thread):
     except Exception as e:
       logging.error('While closing socket: %e' % repr(e))
     self.join()
-
 
 #===========================================================================
 # Audifer
