@@ -9,8 +9,6 @@ from time import sleep
 from threading import Thread, Lock, Timer
 from signal import *
 
-import select
-
 import asyncio
 from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
@@ -41,7 +39,6 @@ class WebsocketServer(Thread):
     self.lock=Lock()
     self.host = host
     self.port = port
-    self.loop = None
     self.server = None
     self.message_queue = []
     self.buffer = bytearray()
@@ -50,31 +47,40 @@ class WebsocketServer(Thread):
     self.doRun = False
 
   async def consume(self, message):
-    try: # grab a chunk of data from the socket...
+    try:
+      # attempt to parse json
       message = json.loads(message)
-      data = bytes(message['data'])
-      if data:
-        self.buffer += data # if there's any data there, add it to the buffer  
+      if not 'data' in message:
+        return
+      # convert message string into bytes
+      if data := bytes(message['data']):
+        with self.lock:
+          self.buffer += data # add the bytes to the buffer  
     except json.JSONDecodeError as e:
       pass
-    except Exception as e: # if there's definitely no data to be read. the socket will throw and exception
+    except Exception as e:
       logging.error(f'read() Other Error: {type(e).__name__}\n{e}')
       pass
 
   async def produce(self):
-    message = None
-    if len(self.message_queue) > 0:
+    # if there are no messages to send, return none
+    if len(self.message_queue) == 0:
+      return None
+    
+    # otherwise, return the first message in the queue
+    with self.lock:
       message = self.message_queue[0]
+      # remove it from the queue
       self.message_queue = self.message_queue[1:]
     return message
 
   async def consumer_handler(self, websocket):
     while True:
       try:
-        message = await websocket.recv()
-        if message:
+        # read a message from the socket, then consume it
+        if message := await websocket.recv():
           await self.consume(message)
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.01) # give the threaded event loop a moment to breathe
       except ConnectionClosed:
         logging.info("Connection Closed")
         break
@@ -84,10 +90,9 @@ class WebsocketServer(Thread):
   async def producer_handler(self, websocket):
     while True:
       try:
-        message = await self.produce()
-        if message:
+        if message := await self.produce():
           await websocket.send(message)
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.01)# give the threaded event loop a moment to breathe
       except ConnectionClosed:
         logging.info("Connection Closed")
         break
@@ -106,7 +111,8 @@ class WebsocketServer(Thread):
       self.clients.remove(websocket)
 
   def write(self, message):
-    self.message_queue.append(message)
+    with self.lock:
+      self.message_queue.append(message)
 
   def extractFrames(self, frames, width):
     bufferSize = frames * width
@@ -124,10 +130,9 @@ class WebsocketServer(Thread):
 
       # this makes sure we return as many frames as requested, by padding with audio "0"
       extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
-      return extractedFrames
+      return bytes(extractedFrames)
 
   async def main(self):
-    self.loop = asyncio.get_running_loop()
     async with serve(self.handler, self.host, self.port) as self.server:
       await self.server.serve_forever()
   
@@ -241,7 +246,7 @@ if __name__ == "__main__":
     })
     ws.write(message)
     audioChunk = ws.extractFrames(frame_count, width)
-    return(bytes(audioChunk), pyaudio.paContinue)
+    return(audioChunk, pyaudio.paContinue)
 
   sound = Audifier(width=width, callback=audio_callback)
 

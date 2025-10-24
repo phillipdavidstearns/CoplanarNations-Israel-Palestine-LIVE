@@ -1,23 +1,64 @@
 const screenWidth = screen.width;
 const screenHeight = screen.height;
 
+var canvas;
+
+var israel_flag;
+var palestine_flag;
+
+var ukraine_flag;
+var russia_flag;
+
+var sudan_flag;
+var splm_flag;
+var slm_al_nur_flag;
+var slm_minnawi_flag;
+var slm_tabour_flag;
+
+var israel;
+var palestine;
+
+var ukraine;
+var russia;
+
+var sudan;
+var splm;
+var slm_al_nur;
+var slm_minnawi;
+var slm_tabour;
+
+var voice1;
+
+async function preload() {
+  israel_flag = loadImage('/images/Flag_of_Israel.png');
+  palestine_flag = loadImage('/images/Flag_of_Palestine.png');
+
+  ukraine_flag = loadImage('/images/Flag_of_Ukraine.png');
+  russia_flag = loadImage('/images/Flag_of_Russia.png');
+
+  sudan_flag = loadImage('/images/Flag_of_Sudan.png');
+  splm_flag = loadImage('/images/Flag_of_SPLM-N.png');
+  slm_al_nur_flag = loadImage('/images/Flag_of_SLM_(al-Nur).png');
+  slm_minnawi_flag = loadImage('/images/Flag_of_SLM_(Minnawi).png');
+  slm_tabour_flag = loadImage('/images/Flag_of_SLM_(Tambour).png');
+}
+
 function setup() {
   console.log(`screenWidth: ${screenWidth}, screenHeight: ${screenHeight}`);
-  createCanvas(screenWidth, screenHeight);
+  canvas = createCanvas(screenWidth, screenHeight, WEBGL);
   loadPixels();
   console.log(`pixels.length: ${pixels.length}, pixelDensity(): ${pixelDensity()}`);
-  // frameRate(30);
+  frameRate(30);
+  israel = new Flag(16, israel_flag);
+  voice1 = new Voice(D_dorian);
 }
 
 function draw() {
-  // loadPixels();
-  // for(var i = 0; i < pixels.length / 4; i++){
-  //   pixels[i*4] = Math.round(255 * (0.5 * (Math.sin(i * (0.5 * Math.sin(frameCount * 0.001)+1) + frameCount * 0.1) + 1)));
-  //   pixels[1+i*4] = Math.round(255 * (0.5 * (Math.sin(i * (0.5 * Math.sin(frameCount * 0.002)+1) + frameCount*0.03) + 1)));
-  //   pixels[2+i*4] = Math.round(255 * (0.5 * (Math.sin(i * (0.5 * Math.sin(frameCount * 0.003)+1) + frameCount*0.02) + 1)));
-  //   pixels[3+i*4] = 255;
-  // }
-  // updatePixels();
+  if (israel){
+    israel.render();
+    israel.update();
+  }
+
 }
 
 async function parseMessage(message){
@@ -32,11 +73,13 @@ async function parseMessage(message){
 }
 
 async function grabPixels(qty){
-  var values = [qty];
+  var values = Array(qty).fill(127);
   try{
-    loadPixels();
-    for(var i = 0; i < qty; i++){
-      values[i] = Math.round(255 * 0.5 * (Math.sin(2*Math.PI*i*(4/1920)) + 1));//pixels[i*4] ^ pixels[1+i*4] ^ pixels[2+i*4];
+    if(canvas){
+      loadPixels();
+      for(var i = 0; i < qty; i++){
+        values[i] = pixels[i*4] ^ pixels[1+i*4] ^ pixels[2+i*4];
+      }
     }
   } catch (error){
     console.log(error);
