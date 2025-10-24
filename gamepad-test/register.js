@@ -76,7 +76,6 @@ class Register {
       }
       this.taps[i] = candidate;
     }
-    console.log(this.taps)
   }
 
   set set(value) {

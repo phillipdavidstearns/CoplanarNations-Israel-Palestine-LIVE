@@ -25,10 +25,9 @@ function addListeners(websocket){
   // Connection opened
   websocket.addEventListener("open", (event) => {
     clearInterval(reconnectInterval);
-    pingInterval = setInterval(() => {
-      websocket.send("ping");
-    }, 1000);
-    websocket.send("Hello Server!");
+    websocket.send(JSON.stringify({
+      'ready' : true
+    }));
   });
 
   // Listen for messages
@@ -44,14 +43,12 @@ function addListeners(websocket){
   // Close
   websocket.addEventListener("close", (event) => {
     console.log("WebSocket connection closed", event);
-    clearInterval(pingInterval);
     if(!reconnectInterval) reconnect();
   });
 
   // Error
   websocket.addEventListener("error", (event) => {
     console.log("Error", event);
-    clearInterval(pingInterval);
     if(!reconnectInterval) reconnect();
   });
 }

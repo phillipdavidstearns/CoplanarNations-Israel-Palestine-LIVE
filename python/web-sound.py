@@ -44,20 +44,29 @@ class WebsocketServer(Thread):
     self.buffer = bytearray()
     self.clients = set()
     self.lastSlice = bytearray()
+    self.isReady = False
     self.doRun = False
 
   async def consume(self, message):
     try:
       # attempt to parse json
       message = json.loads(message)
+
+      if 'ready' in message:
+        self.isReady = message['ready']
+        logging.debug(f"client is ready: {self.isReady}")
+
       if not 'data' in message:
         return
+
       # convert message string into bytes
       if data := bytes(message['data']):
-        with self.lock:
-          self.buffer += data # add the bytes to the buffer  
+        if len(self.buffer) < 1920: self.buffer += data # add the bytes to the buffer 
+        # logging.debug(f"buffer length: {len(self.buffer)}, connectected clients: {len(self.clients)}") 
+    
     except json.JSONDecodeError as e:
       pass
+    
     except Exception as e:
       logging.error(f'read() Other Error: {type(e).__name__}\n{e}')
       pass
@@ -68,10 +77,10 @@ class WebsocketServer(Thread):
       return None
     
     # otherwise, return the first message in the queue
-    with self.lock:
-      message = self.message_queue[0]
-      # remove it from the queue
-      self.message_queue = self.message_queue[1:]
+    message = self.message_queue[0]
+    # remove it from the queue
+    self.message_queue = self.message_queue[1:]
+    # logging.debug(f"messages in queue: {len(self.message_queue)}, connectected clients: {len(self.clients)}")
     return message
 
   async def consumer_handler(self, websocket):
@@ -80,10 +89,12 @@ class WebsocketServer(Thread):
         # read a message from the socket, then consume it
         if message := await websocket.recv():
           await self.consume(message)
-        await asyncio.sleep(0.01) # give the threaded event loop a moment to breathe
+        await asyncio.sleep(0.025) # give the threaded event loop a moment to breathe
+
       except ConnectionClosed:
         logging.info("Connection Closed")
         break
+
       except Exception as e:
         logging.error(f'in consumer_handler(): {repr(e)}')
 
@@ -92,15 +103,17 @@ class WebsocketServer(Thread):
       try:
         if message := await self.produce():
           await websocket.send(message)
-        await asyncio.sleep(0.01)# give the threaded event loop a moment to breathe
+        await asyncio.sleep(0.025)# give the threaded event loop a moment to breathe
+
       except ConnectionClosed:
         logging.info("Connection Closed")
         break
+
       except Exception as e:
         logging.error(f'in producer_handler(): {repr(e)}')
 
   async def handler(self, websocket):
-    logging.debug(f"starting new connection {repr(websocket)}")
+    logging.debug(f"Starting new connection")
     self.clients.add(websocket)
     try:
       await asyncio.gather(
@@ -109,28 +122,29 @@ class WebsocketServer(Thread):
       )
     finally:
       self.clients.remove(websocket)
+      self.ready = False;
 
   def write(self, message):
-    with self.lock:
+    if self.isReady and len(self.message_queue) == 0:
       self.message_queue.append(message)
 
   def extractFrames(self, frames, width):
     bufferSize = frames * width
     if len(self.lastSlice) == 0:
       self.lastSlice = bytearray(bytes([127])*bufferSize)
-    with self.lock:
-      extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
-      # remove the extracted data from the buffer
-      self.buffer = self.buffer[len(extractedFrames):]
 
-      if len(extractedFrames) == 0:
-        extractedFrames = self.lastSlice
-      else:
-        self.lastSlice = extractedFrames
+    extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
+    # remove the extracted data from the buffer
+    self.buffer = self.buffer[len(extractedFrames):]
 
-      # this makes sure we return as many frames as requested, by padding with audio "0"
-      extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
-      return bytes(extractedFrames)
+    if len(extractedFrames) == 0:
+      extractedFrames = self.lastSlice
+    else:
+      self.lastSlice = extractedFrames
+
+    # this makes sure we return as many frames as requested, by padding with audio "0"
+    extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
+    return bytes(extractedFrames)
 
   async def main(self):
     async with serve(self.handler, self.host, self.port) as self.server:
@@ -244,6 +258,7 @@ if __name__ == "__main__":
       'parameter' : 'frames',
       'frame_count' : frame_count
     })
+
     ws.write(message)
     audioChunk = ws.extractFrames(frame_count, width)
     return(audioChunk, pyaudio.paContinue)
