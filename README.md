@@ -21,10 +21,6 @@ Coplanar Nations is a body of work that employs the use of z-fighting to dramati
 
 ## Presentations
 
+* Denver Month of Video (Denver MOV) 2025
+* Denver Noise Fest 2025
 
-
-### Video
-
-### Performance
-
-### Print Media

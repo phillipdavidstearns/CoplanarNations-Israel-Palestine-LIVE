@@ -5,7 +5,7 @@ boolean opt = false;
 boolean cmd = false;
 float rotation_step = PI/64.0;
 float translation_step = 100;
-int min_voices = 2;
+int min_voices = 0;
 int max_voices = 20;
 
 void keyReleased() {
@@ -27,30 +27,25 @@ void keyPressed() {
   case 32: // SCAPE_BAR turn off PlanarNation visibility and animation
 
     if (shift) {
-      nationA.edge_flicker = false;
-      nationA.texture_flicker = false;
-      nationA.do_animate = false;
+
       nationA.render_edges = false;
       nationA.render_texture = false;
 
-      nationB.edge_flicker = false;
-      nationB.texture_flicker = false;
-      nationB.do_animate = false;
       nationB.render_edges = false;
       nationB.render_texture = false;
 
       for (Voice v : voices.voices) {
         v.mute = true;
       }
-    } else {
-      nationA.edge_flicker = false;
-      nationA.texture_flicker = false;
-      nationA.do_animate = false;
-
-      nationB.edge_flicker = false;
-      nationB.texture_flicker = false;
-      nationB.do_animate = false;
     }
+
+    nationA.edge_flicker = false;
+    nationA.texture_flicker = false;
+    nationA.do_animate = false;
+
+    nationB.edge_flicker = false;
+    nationB.texture_flicker = false;
+    nationB.do_animate = false;
 
     break;
   case 37: // left
@@ -181,10 +176,6 @@ void keyPressed() {
     camera1.setPositionZ(5120, true);
     break;
 
-    // Camera FOV
-
-
-    // Camera Orbit Radius
 
 
   case 'M':
@@ -195,9 +186,6 @@ void keyPressed() {
       camera1.orbit_rate = random(0.001, 0.01);
     }
     break;
-    //case 'O':
-    //  camera1.randomize_orbit();
-    //  break;
 
   case 'm':
     nationA.morph(nationA.generateVertices(qty_vertices));

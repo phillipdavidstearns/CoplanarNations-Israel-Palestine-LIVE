@@ -64,7 +64,8 @@ void setup() {
     );
 
   populate_notes();
-  voices = new Voices(2, B_locrian);
+  // start off with 0 voices. press = to add one at a time, - to subtract
+  //voices = new Voices(2, B_locrian); 
 
   nationA = nations[0];
   nationB = nations[1];

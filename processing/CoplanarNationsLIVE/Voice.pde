@@ -256,9 +256,9 @@ class Voice {
         this.pixel_index = this.pixel_index_offset + start_pixel;
 
         if (this.getOrientation().equals("horizontal")) {
-          pixel = _pixels[line_position * width + ((this.pixel_index + width) % width)];
+          pixel = _pixels[line_position * width + (this.pixel_index  % width)];
         } else {
-          pixel = _pixels[((this.pixel_index + height) % height) * width + line_position];
+          pixel = _pixels[(this.pixel_index % height) * width + line_position];
         }
 
         switch(mode) {
@@ -277,7 +277,7 @@ class Voice {
         }
       }
 
-      line[l]=value;
+      line[l] = value;
     }
 
     this.last_pixel_index_offset = this.pixel_index_offset;
